@@ -1,58 +1,60 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { Star, Search, MapPin } from "lucide-react"
 import { Map, MapMarker, useKakaoLoader } from "react-kakao-maps-sdk"
 
 export default function SearchPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
-
   const [places, setPlaces] = useState([]);
-  const [myLocation, setMyLocation] = useState({ lat: 37.4980, lng: 127.0276 }); // 기본값 강남역
+  const [myLocation, setMyLocation] = useState({ lat: 37.4980, lng: 127.0276 });
   const [isSearching, setIsSearching] = useState(false);
 
-  // 카카오맵 SDK 로드
   const [loading, error] = useKakaoLoader({
     appkey: import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY,
   });
 
-  // --- 백엔드 데이터 가져오기 ---
   const fetchNearbyPlaces = async (lat, lng) => {
     setIsSearching(true);
     try {
-      // 포트 8080
       const response = await fetch(
         `http://localhost:8080/api/places/nearby?keyword=스터디룸&lat=${lat}&lng=${lng}&radius=2000`
       );
-
       if (response.ok) {
         const result = await response.json();
         setPlaces(result.data || []);
       }
     } catch (err) {
-      console.error("백엔드 연결 실패, 서버가 켜져 있는 지 확인 바람", err);
+      console.error("백엔드 연결 실패", err);
     } finally {
       setIsSearching(false);
     }
   };
 
-  // --- [자동 실행] 페이지 접속 시 위치 확인 후 백엔드 요청 ---
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((pos) => {
         const { latitude, longitude } = pos.coords;
         setMyLocation({ lat: latitude, lng: longitude });
-        fetchNearbyPlaces(latitude, longitude); // 찾은 위치로 백엔드 호출
+        fetchNearbyPlaces(latitude, longitude);
       });
     } else {
-      fetchNearbyPlaces(myLocation.lat, myLocation.lng); // GPS 안되면 기본 위치로 호출
+      fetchNearbyPlaces(myLocation.lat, myLocation.lng);
     }
   }, []);
 
+  // 상세 페이지로 이동하는 공통 함수
+  const goToDetail = (place) => {
+    setSelectedPlaceId(place.externalId);
+    const url = `/detail/${place.externalId}?name=${encodeURIComponent(place.name)}&lat=${myLocation.lat}&lng=${myLocation.lng}`;
+    navigate(url);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-white">
-      {/* 상단 헤더 */}
       <header className="border-b bg-white p-4 flex items-center justify-between shadow-sm z-10">
         <div className="flex items-center gap-4 flex-1">
           <h1 className="text-2xl font-bold text-indigo-600">StudySpot</h1>
@@ -70,7 +72,6 @@ export default function SearchPage() {
       </header>
 
       <main className="flex flex-1 overflow-hidden">
-        {/* 왼쪽 리스트 영역 */}
         <aside className="w-full lg:w-[400px] overflow-y-auto border-r p-4 space-y-4 bg-gray-50">
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-500 font-medium">검색 결과 {places.length}건</p>
@@ -80,7 +81,7 @@ export default function SearchPage() {
           {places.map((place) => (
             <div
               key={place.externalId}
-              onClick={() => setSelectedPlaceId(place.externalId)}
+              onClick={() => goToDetail(place)}
               className={`p-4 rounded-xl border bg-white cursor-pointer transition-all hover:shadow-md ${
                 selectedPlaceId === place.externalId ? "border-indigo-600 ring-1 ring-indigo-600 shadow-md" : "border-gray-200"
               }`}
@@ -96,20 +97,20 @@ export default function SearchPage() {
           ))}
         </aside>
 
-        {/* 오른쪽 지도 영역 */}
         <section className="hidden lg:flex flex-1 relative">
           {!loading && !error && (
             <Map center={myLocation} style={{ width: "100%", height: "100%" }} level={4}>
-              {/* 내 위치 파란색 마커 */}
-              <MapMarker position={myLocation} image={{ src: "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png", size: { width: 34, height: 35 } }} title="내 위치" />
-
-              {/* 백엔드 장소 마커들 */}
+              <MapMarker
+                position={myLocation}
+                image={{ src: "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png", size: { width: 34, height: 35 } }}
+                title="내 위치"
+              />
               {places.map((place) => (
                 <MapMarker
                   key={place.externalId}
                   position={{ lat: place.latitude, lng: place.longitude }}
                   title={place.name}
-                  onClick={() => setSelectedPlaceId(place.externalId)}
+                  onClick={() => goToDetail(place)}
                 />
               ))}
             </Map>
