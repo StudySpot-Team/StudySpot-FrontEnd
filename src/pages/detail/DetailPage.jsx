@@ -24,7 +24,7 @@ export default function DetailPage() {
     const lat = searchParams.get("lat");
     const lng = searchParams.get("lng");
 
-    // 백엔드 API 호출 (externalId 기반)
+    // 백엔드 API 호출
     const url = `http://localhost:8080/api/places/${id}?name=${encodeURIComponent(name)}&lat=${lat}&lng=${lng}`;
 
     fetch(url)
@@ -39,9 +39,9 @@ export default function DetailPage() {
         console.error("데이터 로드 실패:", error);
         setLoading(false);
       });
-  }, [id, searchParams]); // 기존 주석 로직 유지
+  }, [id, searchParams]);
 
-  // ⭐ 카카오 맵 상세 페이지로 새 탭 이동하는 함수
+  // 카카오 맵 상세 페이지로 새 탭 이동하는 함수
   const goToKakaoMapDetail = () => {
     if (place && place.placeUrl) {
       window.open(place.placeUrl, "_blank", "noopener,noreferrer");
@@ -61,7 +61,7 @@ export default function DetailPage() {
         </button>
       </div>
 
-      {/* 📸 상단 이미지 (클릭 시 카카오맵 상세 뷰로 이동) */}
+      {/* 상단 이미지 (클릭 시 카카오맵 상세 뷰로 이동) */}
       <div
         className="relative h-72 w-full bg-gray-200 cursor-pointer group overflow-hidden shadow-inner"
         onClick={goToKakaoMapDetail}
@@ -96,7 +96,7 @@ export default function DetailPage() {
                 </div>
               </div>
             </div>
-            {/* ⭐ 별점 표시 영역: 실제 데이터 반영 */}
+            {/* 별점 표시 영역*/}
             <div className="flex flex-col items-center bg-amber-50 px-4 py-3 rounded-2xl shrink-0 border border-amber-100">
               <Star className="h-6 w-6 fill-amber-400 text-amber-400" />
               <span className="text-lg font-black text-amber-700 mt-0.5">
@@ -141,11 +141,11 @@ export default function DetailPage() {
             </div>
           </div>
 
-          {/* 💬 방문자 리뷰 섹션 (동적 데이터 반영) */}
+          {/* 방문자 리뷰 섹션 */}
           <div className="mt-12 pb-4">
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-sm font-black text-gray-900">
-                {/* ⭐ 리뷰 개수 동적 표시 */}
+                {/* 리뷰 개수 동적 표시 */}
                 방문자 리뷰 ({place.reviewCount || 0})
               </h3>
               <button
@@ -156,7 +156,7 @@ export default function DetailPage() {
               </button>
             </div>
 
-            {/* ⭐ 리뷰가 0개일 때만 "리뷰를 작성해주세요" 안내창 표시 */}
+            {/* 리뷰가 0개일 때 안내창 표시 */}
             {(!place.reviewCount || place.reviewCount === 0) && (
               <div className="bg-gray-50 rounded-[24px] p-10 flex flex-col items-center justify-center border border-dashed border-gray-200">
                 <div className="p-4 bg-white rounded-full shadow-sm mb-4">
