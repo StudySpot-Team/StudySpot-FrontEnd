@@ -1,8 +1,5 @@
-"use client"
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-// 필요한 아이콘들 유지
 import { ArrowLeft, Star, MapPin, Phone, ExternalLink, Navigation, Zap, VolumeX, MousePointer, MessageSquarePlus } from "lucide-react";
 import { Map, MapMarker, useKakaoLoader } from "react-kakao-maps-sdk";
 
@@ -14,7 +11,6 @@ export default function DetailPage() {
   const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 미니 지도를 위한 카카오맵 로더
   const [mapLoading] = useKakaoLoader({
     appkey: import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY,
   });
@@ -24,7 +20,6 @@ export default function DetailPage() {
     const lat = searchParams.get("lat");
     const lng = searchParams.get("lng");
 
-    // 백엔드 API 호출
     const url = `http://localhost:8080/api/places/${id}?name=${encodeURIComponent(name)}&lat=${lat}&lng=${lng}`;
 
     fetch(url)
@@ -41,11 +36,19 @@ export default function DetailPage() {
       });
   }, [id, searchParams]);
 
-  // 카카오 맵 상세 페이지로 새 탭 이동하는 함수
   const goToKakaoMapDetail = () => {
     if (place && place.placeUrl) {
       window.open(place.placeUrl, "_blank", "noopener,noreferrer");
     }
+  };
+
+  const handleWriteReview = () => {
+    const query = new URLSearchParams({
+      name: place.name,
+      address: place.roadAddress || place.address
+    }).toString();
+
+    navigate(`/reviews/write/${id}?${query}`);
   };
 
   if (loading) return <div className="p-10 text-center font-bold">장소 정보를 불러오는 중...</div>;
@@ -53,7 +56,6 @@ export default function DetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 font-sans">
-      {/* 상단 네비게이션 */}
       <div className="p-4 bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition-colors font-bold">
           <ArrowLeft className="h-5 w-5" />
@@ -61,16 +63,8 @@ export default function DetailPage() {
         </button>
       </div>
 
-      {/* 상단 이미지 (클릭 시 카카오맵 상세 뷰로 이동) */}
-      <div
-        className="relative h-72 w-full bg-gray-200 cursor-pointer group overflow-hidden shadow-inner"
-        onClick={goToKakaoMapDetail}
-      >
-        <img
-          src={place.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800"}
-          alt={place.name}
-          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-        />
+      <div className="relative h-72 w-full bg-gray-200 cursor-pointer group overflow-hidden shadow-inner" onClick={goToKakaoMapDetail}>
+        <img src={place.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800"} alt={place.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
         <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <p className="text-white font-bold border-2 border-white px-6 py-2.5 rounded-full text-sm flex items-center gap-2">
             <ExternalLink className="w-4 h-4" /> 카카오맵에서 사진/후기 더보기
@@ -80,8 +74,6 @@ export default function DetailPage() {
 
       <div className="max-w-xl mx-auto px-4 -mt-12 relative z-10">
         <div className="rounded-[32px] bg-white p-8 shadow-2xl border border-gray-100">
-
-          {/* 장소 기본 정보 카드 */}
           <div className="flex items-start justify-between">
             <div className="flex-1 cursor-pointer group" onClick={goToKakaoMapDetail}>
               <h2 className="text-3xl font-black text-gray-900 tracking-tight group-hover:text-indigo-600 transition-colors flex items-center gap-2">
@@ -96,20 +88,15 @@ export default function DetailPage() {
                 </div>
               </div>
             </div>
-            {/* 별점 표시 영역*/}
             <div className="flex flex-col items-center bg-amber-50 px-4 py-3 rounded-2xl shrink-0 border border-amber-100">
               <Star className="h-6 w-6 fill-amber-400 text-amber-400" />
-              <span className="text-lg font-black text-amber-700 mt-0.5">
-                {place.averageRating?.toFixed(1) || "0.0"}
-              </span>
+              <span className="text-lg font-black text-amber-700 mt-0.5">{place.averageRating?.toFixed(1) || "0.0"}</span>
             </div>
           </div>
 
-          {/* 학습 환경 정보 섹션 */}
           <div className="mt-12 pt-8 border-t border-gray-100">
             <h3 className="text-sm font-black text-gray-900 mb-5 flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
-              학습 환경 정보
+              <span className="w-1.5 h-4 bg-indigo-500 rounded-full"></span>학습 환경 정보
             </h3>
             <div className="grid grid-cols-3 gap-3">
               <div className="flex flex-col items-center p-4 bg-blue-50/50 rounded-2xl border border-blue-50">
@@ -127,7 +114,6 @@ export default function DetailPage() {
             </div>
           </div>
 
-          {/* 위치 확인용 미니 지도 */}
           <div className="mt-12">
             <h3 className="text-sm font-black text-gray-900 mb-4 flex items-center gap-2">
               <MapPin className="h-4 w-4 text-gray-400" /> 위치 확인
@@ -141,22 +127,13 @@ export default function DetailPage() {
             </div>
           </div>
 
-          {/* 방문자 리뷰 섹션 */}
           <div className="mt-12 pb-4">
             <div className="flex justify-between items-center mb-5">
-              <h3 className="text-sm font-black text-gray-900">
-                {/* 리뷰 개수 동적 표시 */}
-                방문자 리뷰 ({place.reviewCount || 0})
-              </h3>
-              <button
-                onClick={() => alert("리뷰 작성 기능은 준비 중입니다!")}
-                className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full hover:bg-indigo-100 transition-colors"
-              >
+              <h3 className="text-sm font-black text-gray-900">방문자 리뷰 ({place.reviewCount || 0})</h3>
+              <button onClick={handleWriteReview} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full hover:bg-indigo-100 transition-colors">
                 리뷰 쓰기
               </button>
             </div>
-
-            {/* 리뷰가 0개일 때 안내창 표시 */}
             {(!place.reviewCount || place.reviewCount === 0) && (
               <div className="bg-gray-50 rounded-[24px] p-10 flex flex-col items-center justify-center border border-dashed border-gray-200">
                 <div className="p-4 bg-white rounded-full shadow-sm mb-4">
@@ -168,22 +145,12 @@ export default function DetailPage() {
             )}
           </div>
 
-          {/* 하단 액션 버튼 그룹 */}
-          <div className="mt-10 flex gap-3" onClick={(e) => e.stopPropagation()}>
-            <a
-              href={`https://map.kakao.com/link/to/${place.name},${place.latitude},${place.longitude}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-black transition-all shadow-xl shadow-indigo-100 active:scale-95 no-underline"
-            >
-              <Navigation className="h-6 w-6" />
-              길찾기 시작
+          <div className="mt-10 flex gap-3">
+            <a href={`https://map.kakao.com/link/to/${place.name},${place.latitude},${place.longitude}`} target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-black transition-all shadow-xl shadow-indigo-100 active:scale-95 no-underline">
+              <Navigation className="h-6 w-6" />길찾기 시작
             </a>
             {place.phone && (
-              <a
-                href={`tel:${place.phone}`}
-                className="px-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl transition-all border border-gray-200"
-              >
+              <a href={`tel:${place.phone}`} className="px-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl transition-all border border-gray-200">
                 <Phone className="h-6 w-6" />
               </a>
             )}

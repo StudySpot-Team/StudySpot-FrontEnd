@@ -4,6 +4,7 @@ import SearchPage from "./pages/search/SearchPage";
 import DetailPage from "./pages/detail/DetailPage";
 import FindPassword from "./pages/auth/FindPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+import WriteReviewPage from "./pages/review/WriteReviewPage";
 
 function App() {
   return (
@@ -22,13 +23,16 @@ function App() {
         {/* 4. 탐색 페이지 */}
         <Route path="/search" element={<SearchPage />} />
 
-        {/* 5. 상세 및 예약 페이지로 이동 */}
+        {/* 5. 상세 페이지 */}
         <Route path="/detail/:id" element={<DetailPage />} />
 
-        {/* 6. 예약 내역 페이지 */}
+        {/* 6. 리뷰 작성 페이지 */}
+        <Route path="/reviews/write/:id" element={<WriteReviewPage />} />
+
+        {/* 7. 예약 내역 페이지 */}
         <Route path="/reservations" element={<div>예약 내역 페이지 (준비 중)</div>} />
 
-        {/* 7. 잘못된 주소로 들어오면 로그인으로 리다이렉트 */}
+        {/* 8. 잘못된 주소 처리 */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </Router>
