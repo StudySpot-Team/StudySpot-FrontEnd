@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { Star, Search, MapPin, X, Navigation, Bell, User, ChevronDown } from "lucide-react"
+import { Star, Search, MapPin, X, Navigation, Bell, User } from "lucide-react"
 import { Map, MapMarker, CustomOverlayMap, useKakaoLoader } from "react-kakao-maps-sdk"
 
 export default function SearchPage() {
@@ -15,7 +15,6 @@ export default function SearchPage() {
   const [isSearching, setIsSearching] = useState(false);
 
   // UI 상태 관리
-  const [isMyPageOpen, setIsMyPageOpen] = useState(false);
   const [isNotiOpen, setIsNotiOpen] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 1, content: "예약하신 스터디룸 이용 시간이 30분 남았습니다.", time: "방금 전" },
@@ -32,13 +31,9 @@ export default function SearchPage() {
    */
   const handleLogout = () => {
     if (window.confirm("로그아웃 하시겠습니까?")) {
-      localStorage.removeItem("token");
+      localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
-
-      setIsMyPageOpen(false);
-
       navigate("/login", { replace: true });
-
     }
   };
 
@@ -145,39 +140,24 @@ export default function SearchPage() {
             )}
           </div>
 
-          {/* 마이페이지 섹션 */}
-          <div
-            className="relative ml-2"
-            onMouseEnter={() => setIsMyPageOpen(true)}
-            onMouseLeave={() => setIsMyPageOpen(false)}
+          {/* 마이페이지 버튼 */}
+          <button
+            onClick={() => navigate("/mypage")}
+            className="flex items-center gap-2 p-2 px-4 bg-gray-50 text-gray-800 font-bold hover:bg-indigo-50 hover:text-indigo-600 rounded-full transition-all text-sm border border-gray-100 hover:border-indigo-100"
           >
-            <button className="flex items-center gap-2 p-2 px-4 bg-gray-50 text-gray-800 font-bold hover:bg-gray-100 rounded-full transition-all text-sm border border-gray-100">
-              <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-indigo-600" />
-              </div>
-              마이페이지
-              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isMyPageOpen ? 'rotate-180' : ''}`} />
-            </button>
+            <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+              <User className="h-4 w-4 text-indigo-600" />
+            </div>
+            마이페이지
+          </button>
 
-            {isMyPageOpen && (
-              <div className="absolute right-0 top-full pt-2 w-48 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="bg-white border border-gray-100 shadow-2xl rounded-2xl py-2 overflow-hidden">
-                  <button onClick={() => navigate('/wishlist')} className="w-full text-left px-5 py-3 text-sm text-gray-700 hover:bg-indigo-50 transition-colors font-semibold">찜 목록</button>
-                  <button onClick={() => navigate('/my-reviews')} className="w-full text-left px-5 py-3 text-sm text-gray-700 hover:bg-indigo-50 transition-colors font-semibold">후기 작성/조회</button>
-                  <button onClick={() => navigate('/profile-edit')} className="w-full text-left px-5 py-3 text-sm text-gray-700 hover:bg-indigo-50 transition-colors font-semibold">내 정보 수정</button>
-                  <div className="my-1 border-t border-gray-50"></div>
-                  {/* 로그아웃 버튼 */}
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full text-left px-5 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors font-bold"
-                  >
-                    로그아웃
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* 로그아웃 버튼  */}
+          <button
+            onClick={handleLogout}
+            className="p-2 px-4 text-sm font-bold text-red-500 hover:bg-red-50 rounded-full transition-all"
+          >
+            로그아웃
+          </button>
         </div>
       </header>
 

@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Star, MapPin, Phone, ExternalLink, Navigation, Zap, VolumeX, MousePointer, MessageSquarePlus } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Phone, ExternalLink, Navigation, Zap, VolumeX, MousePointer, MessageSquarePlus, Heart } from "lucide-react";
 import { Map, MapMarker, useKakaoLoader } from "react-kakao-maps-sdk";
 
 export default function DetailPage() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id: externalId } = useParams();
   const [searchParams] = useSearchParams();
 
   const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const [isFavorite, setIsFavorite] = useState(false);
+  const userId = 1;
 
   const [mapLoading] = useKakaoLoader({
     appkey: import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY,
@@ -20,21 +23,70 @@ export default function DetailPage() {
     const lat = searchParams.get("lat");
     const lng = searchParams.get("lng");
 
-    const url = `http://localhost:8080/api/places/${id}?name=${encodeURIComponent(name)}&lat=${lat}&lng=${lng}`;
+    const safeName = (!name || name === "null" || name === "undefined") ? "" : name;
+    const safeLat = (!lat || lat === "null" || lat === "undefined") ? "0.0" : lat;
+    const safeLng = (!lng || lng === "null" || lng === "undefined") ? "0.0" : lng;
 
-    fetch(url)
-      .then((response) => response.json())
-      .then((res) => {
-        if (res.success) {
+    // 1. 장소 상세 조회 API
+    const fetchPlaceDetail = async () => {
+      try {
+        const url = `http://localhost:8080/api/places/${externalId}?name=${encodeURIComponent(safeName)}&lat=${safeLat}&lng=${safeLng}`;
+        const response = await fetch(url);
+        const res = await response.json();
+
+        if (res.data) {
           setPlace(res.data);
+          await fetchFavoriteStatus();
         }
         setLoading(false);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("데이터 로드 실패:", error);
         setLoading(false);
-      });
-  }, [id, searchParams]);
+      }
+    };
+
+    fetchPlaceDetail();
+  }, [externalId, searchParams]);
+
+  // 찜 상태 확인 함수
+  const fetchFavoriteStatus = async () => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/favorites/check?userId=${userId}&placeId=${externalId}`);
+      const status = await res.json();
+      setIsFavorite(Boolean(status));
+    } catch (err) {
+      console.error("찜 상태 확인 실패:", err);
+      setIsFavorite(false);
+    }
+  };
+
+  const handleToggleFavorite = async (e) => {
+      if (e) e.stopPropagation();
+
+      const previousState = isFavorite;
+      setIsFavorite(!previousState);
+
+      try {
+        const response = await fetch(`http://localhost:8080/api/favorites/toggle?userId=${userId}&placeId=${externalId}`, {
+          method: 'POST'
+        });
+
+        if (!response.ok) {
+          throw new Error("401이나 500 에러 발생");
+        }
+
+        const result = await response.text();
+
+        if (result.trim() === "added") {
+          setIsFavorite(true);
+        } else if (result.trim() === "deleted") {
+          setIsFavorite(false);
+        }
+      } catch (error) {
+        console.error("찜하기 실패:", error);
+        setIsFavorite(previousState);
+      }
+    };
 
   const goToKakaoMapDetail = () => {
     if (place && place.placeUrl) {
@@ -47,8 +99,7 @@ export default function DetailPage() {
       name: place.name,
       address: place.roadAddress || place.address
     }).toString();
-
-    navigate(`/reviews/write/${id}?${query}`);
+    navigate(`/reviews/write/${externalId}?${query}`);
   };
 
   if (loading) return <div className="p-10 text-center font-bold">장소 정보를 불러오는 중...</div>;
@@ -56,13 +107,18 @@ export default function DetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 font-sans">
-      <div className="p-4 bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b">
+      {/* 상단 헤더 */}
+      <div className="p-4 bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b flex justify-between items-center">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition-colors font-bold">
           <ArrowLeft className="h-5 w-5" />
           <span>뒤로가기</span>
         </button>
+        <button onClick={() => navigate("/mypage")} className="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors">
+          마이페이지
+        </button>
       </div>
 
+      {/* 이미지 섹션 */}
       <div className="relative h-72 w-full bg-gray-200 cursor-pointer group overflow-hidden shadow-inner" onClick={goToKakaoMapDetail}>
         <img src={place.imageUrl || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800"} alt={place.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
         <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -70,6 +126,15 @@ export default function DetailPage() {
             <ExternalLink className="w-4 h-4" /> 카카오맵에서 사진/후기 더보기
           </p>
         </div>
+        {/* 상단 찜 버튼 */}
+        <button
+          onClick={handleToggleFavorite}
+          className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition-all active:scale-90 z-20 ${
+            isFavorite ? "bg-red-500 text-white" : "bg-white/90 text-gray-400"
+          }`}
+        >
+          <Heart className={`h-6 w-6 ${isFavorite ? "fill-current" : ""}`} />
+        </button>
       </div>
 
       <div className="max-w-xl mx-auto px-4 -mt-12 relative z-10">
@@ -94,6 +159,7 @@ export default function DetailPage() {
             </div>
           </div>
 
+          {/* 학습 환경 정보 */}
           <div className="mt-12 pt-8 border-t border-gray-100">
             <h3 className="text-sm font-black text-gray-900 mb-5 flex items-center gap-2">
               <span className="w-1.5 h-4 bg-indigo-500 rounded-full"></span>학습 환경 정보
@@ -114,12 +180,13 @@ export default function DetailPage() {
             </div>
           </div>
 
+          {/* 위치 확인 (지도) */}
           <div className="mt-12">
             <h3 className="text-sm font-black text-gray-900 mb-4 flex items-center gap-2">
               <MapPin className="h-4 w-4 text-gray-400" /> 위치 확인
             </h3>
             <div className="h-48 w-full rounded-2xl overflow-hidden border border-gray-100 shadow-inner">
-              {!mapLoading && (
+              {!mapLoading && place.latitude && place.longitude && (
                 <Map center={{ lat: place.latitude, lng: place.longitude }} style={{ width: "100%", height: "100%" }} level={3}>
                   <MapMarker position={{ lat: place.latitude, lng: place.longitude }} />
                 </Map>
@@ -127,6 +194,7 @@ export default function DetailPage() {
             </div>
           </div>
 
+          {/* 리뷰 섹션 */}
           <div className="mt-12 pb-4">
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-sm font-black text-gray-900">방문자 리뷰 ({place.reviewCount || 0})</h3>
@@ -145,12 +213,22 @@ export default function DetailPage() {
             )}
           </div>
 
+          {/* 하단 버튼 바 */}
           <div className="mt-10 flex gap-3">
             <a href={`https://map.kakao.com/link/to/${place.name},${place.latitude},${place.longitude}`} target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-black transition-all shadow-xl shadow-indigo-100 active:scale-95 no-underline">
               <Navigation className="h-6 w-6" />길찾기 시작
             </a>
+            {/* 하단 찜 버튼 */}
+            <button
+              onClick={handleToggleFavorite}
+              className={`px-6 flex items-center justify-center rounded-2xl transition-all border active:scale-90 ${
+                isFavorite ? "bg-red-50 border-red-100 text-red-500" : "bg-gray-100 border-gray-200 text-gray-700"
+              }`}
+            >
+              <Heart className={`h-6 w-6 ${isFavorite ? "fill-current" : ""}`} />
+            </button>
             {place.phone && (
-              <a href={`tel:${place.phone}`} className="px-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl transition-all border border-gray-200">
+              <a href={`tel:${place.phone}`} className="px-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl border border-gray-200">
                 <Phone className="h-6 w-6" />
               </a>
             )}
