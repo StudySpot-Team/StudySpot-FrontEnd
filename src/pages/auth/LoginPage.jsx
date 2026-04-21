@@ -12,7 +12,6 @@ export default function AuthForm() {
   const [nickname, setNickname] = useState("")
   const [activeTab, setActiveTab] = useState("login")
 
-  // 백엔드 기본 주소
   const API_BASE_URL = "http://localhost:8080/api/auth"
 
   // 1. 로그인 처리 함수
@@ -24,11 +23,17 @@ export default function AuthForm() {
         password: password
       })
 
-      alert(response.data.message || "로그인 성공!")
-      console.log("로그인 데이터:", response.data.data)
+      const token = response.data.accessToken || response.data.token || response.data.data?.accessToken;
 
-      //로그인 성공 시  /search 페이지로 이동
-      navigate("/search");
+      if (token) {
+        localStorage.setItem("accessToken", token);
+        localStorage.setItem("user", JSON.stringify(response.data.data));
+
+        alert(response.data.message || "로그인 성공!");
+        navigate("/search");
+      } else {
+        alert("토큰을 받지 못했습니다. 백엔드 응답 형식을 확인해주세요.");
+      }
 
     } catch (error) {
       console.error("로그인 에러:", error.response?.data)
@@ -47,8 +52,6 @@ export default function AuthForm() {
       })
 
       alert(response.data.message || "회원가입 성공!")
-
-      // 가입 성공 시 로그인 탭으로 자동 이동
       setActiveTab("login")
     } catch (error) {
       console.error("회원가입 에러:", error.response?.data)
@@ -59,7 +62,6 @@ export default function AuthForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 font-sans">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 transition-all">
-        {/* Header */}
         <div className="text-center pt-8 pb-4 px-6">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-100">
             <span className="text-2xl font-bold text-white">S</span>
@@ -69,7 +71,6 @@ export default function AuthForm() {
         </div>
 
         <div className="px-8 pb-8">
-          {/* Tabs List */}
           <div className="grid w-full grid-cols-2 mb-6 bg-gray-100 p-1 rounded-lg">
             <button
               onClick={() => setActiveTab("login")}
@@ -89,7 +90,6 @@ export default function AuthForm() {
             </button>
           </div>
 
-          {/* Login Content */}
           {activeTab === "login" && (
             <>
               <form onSubmit={handleLogin} className="space-y-4">
@@ -112,7 +112,6 @@ export default function AuthForm() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
                     <label className="text-sm font-semibold text-gray-700" htmlFor="login-password">비밀번호</label>
-                    {/* 비밀번호 찾기 */}
                     <button
                       type="button"
                       onClick={() => navigate('/find-password')}
@@ -140,7 +139,6 @@ export default function AuthForm() {
                 </button>
               </form>
 
-              {/* 소셜 로그인 구분선 */}
               <div className="relative my-8">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-gray-200"></span>
@@ -150,7 +148,6 @@ export default function AuthForm() {
                 </div>
               </div>
 
-              {/* 소셜 로그인 버튼 그룹 */}
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => window.location.href = 'http://localhost:8080/oauth2/authorization/kakao'}
@@ -170,7 +167,6 @@ export default function AuthForm() {
             </>
           )}
 
-          {/* Sign Up Content */}
           {activeTab === "signup" && (
             <form onSubmit={handleSignUp} className="space-y-4 animate-in fade-in duration-300">
               <div className="space-y-2">

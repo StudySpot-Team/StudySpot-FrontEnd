@@ -4,7 +4,7 @@ import { Star, Pen, MapPin, ArrowLeft } from "lucide-react";
 
 export default function WriteReviewPage() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id: externalId } = useParams();
   const [searchParams] = useSearchParams();
 
   const [rating, setRating] = useState(0);
@@ -30,23 +30,47 @@ export default function WriteReviewPage() {
     setIsSubmitting(true);
 
     try {
+      const token = localStorage.getItem("accessToken");
+      const userStr = localStorage.getItem("user");
+
+      let currentUserId = 1;
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        currentUserId = userData.id || userData.userId || 1;
+      }
+
+      const requestData = {
+        userId: currentUserId,
+        externalId: externalId,
+        name: placeName,
+        address: placeAddress,
+        content: content.trim(),
+        rating: rating
+      };
+
       const response = await fetch("http://localhost:8080/api/reviews", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: 1,
-          placeId: Number(id),
-          content: content.trim(),
-          rating: rating,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(requestData),
       });
+
+      if (response.status === 401) {
+        alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+        navigate("/login");
+        return;
+      }
 
       if (!response.ok) throw new Error("등록 실패");
 
       alert("리뷰가 등록되었습니다!");
-      navigate(`/detail/${id}?name=${encodeURIComponent(placeName)}`);
+      // 상세 페이지로 다시 이동
+      navigate(`/detail/${externalId}?name=${encodeURIComponent(placeName)}`);
     } catch (error) {
-      alert("서버 오류가 발생했습니다. 백엔드가 켜져 있는지 확인하세요.");
+      alert("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -61,7 +85,7 @@ export default function WriteReviewPage() {
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-lg font-black font-sans">리뷰 작성</h1>
+          <h1 className="text-lg font-black">리뷰 작성</h1>
         </div>
       </header>
 
@@ -103,7 +127,7 @@ export default function WriteReviewPage() {
               <label className="text-sm font-black">솔직한 후기</label>
             </div>
             <textarea
-              className="w-full min-h-[160px] p-4 rounded-2xl bg-gray-50 border-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className="w-full min-h-[160px] p-4 rounded-2xl bg-gray-50 border-none focus:ring-2 focus:ring-indigo-500 font-medium outline-none"
               placeholder="최소 10자 이상 작성해주세요."
               value={content}
               onChange={(e) => setContent(e.target.value)}
