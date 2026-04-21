@@ -118,9 +118,12 @@ export default function MyPage() {
                 <p className="text-sm text-gray-400 font-medium">{user.email}</p>
               </div>
             </div>
+
+            {/* 프로필 설정 페이지로 이동하는 버튼 */}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={() => navigate("/profile/edit")} 
               className="flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-500 transition-colors hover:bg-gray-100 border border-gray-100"
             >
               <Edit3 className="h-3.5 w-3.5" />
@@ -135,7 +138,6 @@ export default function MyPage() {
 
         {/* --- 통계 그리드 --- */}
         <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 font-bold">
-          {/* 리뷰 통계 카드 */}
           <motion.div
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
@@ -149,7 +151,6 @@ export default function MyPage() {
             <p className="text-3xl font-black text-gray-900 tracking-tight">{user.reviewCount}</p>
           </motion.div>
 
-          {/* 즐겨찾기 통계 카드  */}
           <motion.div
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
