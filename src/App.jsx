@@ -9,6 +9,7 @@ import ReviewListPage from "./pages/review/ReviewListPage";
 import MyPage from "./pages/mypage/MyPage";
 import PlaceReviewListPage from "./pages/place/PlaceReviewListPage";
 import FavoriteListPage from "./pages/mypage/FavoriteListPage";
+import ProfileSettings from "./pages/mypage/ProfileSettings";
 
 const PrivateRoute = ({ children }) => {
   const isAuthenticated = !!localStorage.getItem("accessToken");
@@ -53,7 +54,10 @@ function App() {
         {/* 11. 즐겨찾기 목록 페이지 */}
         <Route path="/mypage/favorites" element={<FavoriteListPage />} />
 
-        {/* 12. 잘못된 주소 처리 */}
+        {/* 12. 프로필 수정 페이지 경로 추가 */}
+        <Route path="/profile/edit" element={<ProfileSettings />} />
+
+        {/* 13. 잘못된 주소 처리 */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </Router>

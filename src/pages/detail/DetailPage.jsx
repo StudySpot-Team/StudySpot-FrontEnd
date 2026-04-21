@@ -159,27 +159,6 @@ export default function DetailPage() {
             </div>
           </div>
 
-          {/* 학습 환경 정보 */}
-          <div className="mt-12 pt-8 border-t border-gray-100">
-            <h3 className="text-sm font-black text-gray-900 mb-5 flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-indigo-500 rounded-full"></span>학습 환경 정보
-            </h3>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="flex flex-col items-center p-4 bg-blue-50/50 rounded-2xl border border-blue-50">
-                <Zap className="h-6 w-6 text-blue-500 mb-2" />
-                <span className="text-[11px] font-black text-blue-700">콘센트 넉넉</span>
-              </div>
-              <div className="flex flex-col items-center p-4 bg-purple-50/50 rounded-2xl border border-purple-50">
-                <VolumeX className="h-6 w-6 text-purple-500 mb-2" />
-                <span className="text-[11px] font-black text-purple-700">집중 잘됨</span>
-              </div>
-              <div className="flex flex-col items-center p-4 bg-green-50/50 rounded-2xl border border-green-50">
-                <MousePointer className="h-6 w-6 text-green-500 mb-2" />
-                <span className="text-[11px] font-black text-green-700">노트북 환영</span>
-              </div>
-            </div>
-          </div>
-
           {/* 지도 섹션 */}
           <div className="mt-12">
             <h3 className="text-sm font-black text-gray-900 mb-4 flex items-center gap-2">
@@ -194,7 +173,7 @@ export default function DetailPage() {
             </div>
           </div>
 
-          {/* --- 방문자 리뷰 섹션 (클릭 가능하도록 수정) --- */}
+          {/* --- 방문자 리뷰 섹션 --- */}
           <div className="mt-12 pb-4">
             <div className="flex justify-between items-center mb-5">
               <div
