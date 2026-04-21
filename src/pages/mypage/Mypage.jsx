@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
@@ -50,15 +52,17 @@ export default function MyPage() {
         const response = await fetch("http://localhost:8080/api/mypage/me", {
           headers: { "Authorization": `Bearer ${token}` }
         });
-        const data = await response.json();
+        const result = await response.json();
 
-        if (data) {
+        const userData = result.data || result;
+
+        if (userData) {
           setUser({
-            nickname: data.nickname || "지수",
-            email: data.email,
-            bio: data.bio || "매일 꾸준히 공부하는 스터디러입니다.",
-            reviewCount: data.reviewCount || 0,
-            favoriteCount: data.favoriteCount || 0
+            nickname: userData.nickname || "지수",
+            email: userData.email,
+            bio: userData.bio || "매일 꾸준히 공부하는 스터디러입니다.",
+            reviewCount: userData.reviewCount || 0,
+            favoriteCount: userData.favoriteCount || 0
           });
         }
       } catch (err) {
@@ -124,13 +128,12 @@ export default function MyPage() {
             </motion.button>
           </div>
 
-          {/* 자기소개  */}
           <div className="mt-4 rounded-2xl bg-gray-50/50 p-4 border border-gray-100/30">
             <p className="text-sm leading-relaxed text-gray-600 font-medium">{user.bio}</p>
           </div>
         </motion.div>
 
-        {/* --- 통계 그리드 (리뷰 개수, 즐겨찾기 개수) --- */}
+        {/* --- 통계 그리드 --- */}
         <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 font-bold">
           {/* 리뷰 통계 카드 */}
           <motion.div
@@ -146,10 +149,11 @@ export default function MyPage() {
             <p className="text-3xl font-black text-gray-900 tracking-tight">{user.reviewCount}</p>
           </motion.div>
 
-          {/* 즐겨찾기 통계 카드 */}
+          {/* 즐겨찾기 통계 카드  */}
           <motion.div
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
+            onClick={() => navigate("/mypage/favorites")}
             className="cursor-pointer rounded-[32px] bg-white p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all"
           >
             <div className="flex items-center gap-2 text-gray-400 mb-1">
@@ -188,7 +192,6 @@ export default function MyPage() {
           ))}
         </motion.div>
 
-        {/* 하단 로그아웃 버튼 */}
         <motion.div variants={itemVariants} className="pt-2">
           <button
             onClick={handleLogout}
