@@ -7,6 +7,7 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import WriteReviewPage from "./pages/review/WriteReviewPage";
 import ReviewListPage from "./pages/review/ReviewListPage";
 import MyPage from "./pages/mypage/MyPage";
+import PlaceReviewListPage from "./pages/place/PlaceReviewListPage";
 
 const PrivateRoute = ({ children }) => {
   const isAuthenticated = !!localStorage.getItem("accessToken");
@@ -45,7 +46,10 @@ function App() {
         {/* 9. 리뷰 내역 페이지 */}
         <Route path="/mypage/reviews" element={<PrivateRoute><ReviewListPage /></PrivateRoute>} />
 
-        {/* 10. 잘못된 주소 처리 */}
+        {/* 10. 장소 리뷰 목록 페이지 */}
+        <Route path="/reviews/place/:externalId" element={<PlaceReviewListPage />} />
+
+        {/* 11. 잘못된 주소 처리 */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </Router>
