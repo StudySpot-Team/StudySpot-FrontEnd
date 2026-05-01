@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Star, Search, MapPin, X, Navigation, Bell, User } from "lucide-react"
+import { Star, Search, MapPin, X, User, ArrowDownWideNarrow } from "lucide-react"
 import { Map, MapMarker, CustomOverlayMap, useKakaoLoader } from "react-kakao-maps-sdk"
 
 export default function SearchPage() {
@@ -14,7 +14,15 @@ export default function SearchPage() {
   const [myLocation, setMyLocation] = useState({ lat: 37.4980, lng: 127.0276 });
   const [isSearching, setIsSearching] = useState(false);
 
-  // 카카오 지도 API 로드
+  // --- 필터 상태 ---
+  const [filters, setFilters] = useState({
+    category: "전체",
+    minRating: 0,
+    sortBy: "default",
+  });
+
+  const categories = ["전체", "스터디카페", "독서실", "카페"];
+
   const [loading, error] = useKakaoLoader({
     appkey: import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY,
   });
@@ -27,16 +35,36 @@ export default function SearchPage() {
     }
   };
 
-  const fetchNearbyPlaces = async (lat, lng) => {
+  /**
+   * 1. 주변 장소 검색
+   */
+  const fetchNearbyPlaces = async (lat, lng, keywordStr = "스터디카페,독서실,카페") => {
     setIsSearching(true);
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/places/nearby?keyword=스터디룸&lat=${lat}&lng=${lng}&radius=2000`
+      const keywords = keywordStr.split(",");
+
+      const fetchPromises = keywords.map(kw =>
+        fetch(`http://localhost:8080/api/places/nearby?keyword=${encodeURIComponent(kw.trim())}&lat=${lat}&lng=${lng}&radius=2000`)
+          .then(res => res.ok ? res.json() : { data: [] })
       );
-      if (response.ok) {
-        const result = await response.json();
-        setPlaces(result.data || []);
-      }
+
+      const results = await Promise.all(fetchPromises);
+
+      const mergedPlaces = [];
+      const seenIds = new Set();
+
+      results.forEach(result => {
+        if (result.data) {
+          result.data.forEach(place => {
+            if (!seenIds.has(place.externalId)) {
+              seenIds.add(place.externalId);
+              mergedPlaces.push(place);
+            }
+          });
+        }
+      });
+
+      setPlaces(mergedPlaces);
     } catch (err) {
       console.error("백엔드 연결 실패", err);
     } finally {
@@ -44,17 +72,65 @@ export default function SearchPage() {
     }
   };
 
+  /**
+   * 2. 복합 조건 검색
+   */
+  const fetchFilteredPlaces = useCallback(async () => {
+    setIsSearching(true);
+    try {
+      const { category, minRating } = filters;
+      const categoryParam = category === "전체" ? "" : encodeURIComponent(category);
+
+      const response = await fetch(
+        `http://localhost:8080/api/places/search?category=${categoryParam}&minRating=${minRating}`
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        setPlaces(result.data || []);
+      }
+    } catch (err) {
+      console.error("필터 검색 실패", err);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [filters]);
+
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((pos) => {
         const { latitude, longitude } = pos.coords;
         setMyLocation({ lat: latitude, lng: longitude });
-        fetchNearbyPlaces(latitude, longitude);
+        fetchNearbyPlaces(latitude, longitude, "스터디카페,독서실,카페");
       });
     }
   }, []);
 
-  // 상세페이지로 이동하는 공통 함수
+  useEffect(() => {
+    if (filters.minRating === 0) {
+      const searchKeyword = filters.category === "전체" ? "스터디카페,독서실,카페" : filters.category;
+      fetchNearbyPlaces(myLocation.lat, myLocation.lng, searchKeyword);
+    } else {
+      fetchFilteredPlaces();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.category, filters.minRating, fetchFilteredPlaces]); // sortBy는 API 호출과 무관하므로 의존성에서 제외
+
+  // --- 프론트엔드 정렬 로직 ---
+  const getSortedPlaces = () => {
+    const sorted = [...places];
+    if (filters.sortBy === "reviewCount") {
+      // 리뷰 많은 순 내림차순
+      return sorted.sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0));
+    } else if (filters.sortBy === "rating") {
+      // 평점 높은 순 내림차순
+      return sorted.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+    }
+    return sorted;
+  };
+
+  const sortedPlaces = getSortedPlaces();
+
   const goToDetail = (place) => {
     const url = `/detail/${place.externalId}?name=${encodeURIComponent(place.name)}&lat=${myLocation.lat}&lng=${myLocation.lng}`;
     navigate(url);
@@ -62,7 +138,7 @@ export default function SearchPage() {
 
   return (
     <div className="flex flex-col h-screen bg-white font-sans overflow-hidden">
-      {/* --- 상단 헤더 --- */}
+      {/* 상단 헤더 */}
       <header className="flex-none border-b bg-white px-6 py-3 flex items-center justify-between shadow-sm z-[1001]">
         <div className="flex items-center gap-10 flex-1">
           <h1 className="text-2xl font-black text-indigo-600 tracking-tighter cursor-pointer" onClick={() => navigate('/search')}>
@@ -87,41 +163,100 @@ export default function SearchPage() {
         </div>
       </header>
 
-      {/* --- 메인 영역 --- */}
+      {/* 메인 영역 */}
       <main className="flex flex-1 h-[calc(100vh-64px)] overflow-hidden">
         {/* 사이드바 */}
-        <aside className="w-[400px] h-full overflow-y-auto border-r p-4 space-y-4 bg-gray-50 shadow-inner">
-          <div className="flex justify-between items-center px-1 mb-2">
-            <p className="text-sm text-gray-500 font-bold tracking-tight">검색 결과 {places.length}건</p>
-            {isSearching && <span className="text-[10px] text-indigo-600 animate-pulse font-black">데이터 동기화 중...</span>}
+        <aside className="w-[400px] h-full flex flex-col border-r bg-gray-50 shadow-inner">
+
+          {/* 필터 바 */}
+          <div className="p-4 bg-white border-b space-y-3">
+            <div className="flex items-center gap-2">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setFilters({ ...filters, category: cat })}
+                  className={`px-4 py-1.5 rounded-full text-xs font-black transition-all ${
+                    filters.category === cat
+                      ? "bg-indigo-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <select
+                      value={filters.minRating}
+                      onChange={(e) => setFilters({ ...filters, minRating: Number(e.target.value) })}
+                      className="text-xs font-bold bg-gray-50 border-none rounded-lg px-3 py-1.5 outline-none"
+                  >
+                      <option value="0">평점 전체</option>
+                      <option value="4">⭐ 4.0 이상</option>
+                      <option value="3">⭐ 3.0 이상</option>
+                  </select>
+
+                  {/* --- 정렬 옵션 드롭다운 추가 --- */}
+                  <select
+                      value={filters.sortBy}
+                      onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
+                      className="text-xs font-bold bg-gray-50 text-indigo-600 border-none rounded-lg px-3 py-1.5 outline-none cursor-pointer"
+                  >
+                      <option value="default">기본순</option>
+                      <option value="reviewCount">리뷰 많은 순</option>
+                      <option value="rating">평점 높은 순</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    {isSearching && <span className="text-[10px] text-indigo-600 animate-pulse font-black">로딩중...</span>}
+                    <p className="text-[11px] text-gray-400 font-bold">검색 결과 {sortedPlaces.length}건</p>
+                </div>
+            </div>
           </div>
 
-          {places.map((place) => (
-            <div
-              key={place.externalId}
-              onClick={() => goToDetail(place)}
-              className={`p-5 rounded-[28px] border bg-white cursor-pointer transition-all hover:shadow-xl hover:-translate-y-0.5 group ${
-                selectedPlaceId === place.externalId ? "border-indigo-600 ring-4 ring-indigo-50 shadow-md" : "border-gray-100"
-              }`}
-            >
-              <div className="flex justify-between items-start">
-                <h3 className="font-black text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors">{place.name}</h3>
-                <div className="flex items-center gap-1 text-amber-500 font-black shrink-0">
-                  <Star className="h-3.5 w-3.5 fill-current" />
-                  <span className="text-sm">{place.averageRating?.toFixed(1) || "0.0"}</span>
-                  <span className="text-[10px] text-gray-300 ml-0.5">({place.reviewCount || 0})</span>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {sortedPlaces.length === 0 && !isSearching ? (
+                <div className="text-center py-20">
+                    <MapPin className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+                    <p className="text-sm text-gray-400 font-bold">등록된 장소가 없습니다.</p>
                 </div>
-              </div>
-              <p className="text-[11px] text-gray-400 mt-2 font-medium line-clamp-1">{place.roadAddress || place.address}</p>
+            ) : (
+                sortedPlaces.map((place) => (
+                    <div
+                      key={place.externalId}
+                      onClick={() => goToDetail(place)}
+                      className={`p-5 rounded-[28px] border bg-white cursor-pointer transition-all hover:shadow-xl ${
+                        selectedPlaceId === place.externalId ? "border-indigo-600 ring-4 ring-indigo-50" : "border-gray-100"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                            <h3 className="font-black text-gray-900 leading-tight">{place.name}</h3>
+                            <span className="inline-block mt-1 text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded">
+                                {place.category?.split(' > ').pop() || filters.category}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-amber-500 font-black shrink-0">
+                          <Star className="h-3.5 w-3.5 fill-current" />
+                          <span className="text-sm">{place.averageRating?.toFixed(1) || "0.0"}</span>
+                          <span className="text-[10px] text-gray-300 ml-0.5">({place.reviewCount || 0})</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-2 font-medium line-clamp-1">{place.roadAddress || place.address}</p>
 
-              <div className="mt-4 flex items-center gap-2">
-                <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
-                  {Math.round(place.distance)}m
-                </span>
-                <span className="text-[11px] text-gray-400 font-bold">{place.phone || "연락처 정보 없음"}</span>
-              </div>
-            </div>
-          ))}
+                      <div className="mt-4 flex items-center gap-2">
+                        <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                          {place.distance ? `${Math.round(place.distance)}m` : '거리 정보 없음'}
+                        </span>
+                        <span className="text-[11px] text-gray-400 font-bold">{place.phone || "연락처 미등록"}</span>
+                      </div>
+                    </div>
+                  ))
+            )}
+          </div>
         </aside>
 
         {/* 지도 영역 */}
@@ -131,9 +266,6 @@ export default function SearchPage() {
               center={myLocation}
               style={{ width: "100%", height: "100%" }}
               level={3}
-              onCreate={(map) => {
-                 setTimeout(() => map.relayout(), 100);
-              }}
             >
               <MapMarker
                 position={myLocation}
@@ -141,10 +273,9 @@ export default function SearchPage() {
                   src: "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png",
                   size: { width: 24, height: 35 }
                 }}
-                title="현재 위치"
               />
 
-              {places.map((place) => (
+              {sortedPlaces.map((place) => (
                 <React.Fragment key={place.externalId}>
                   <MapMarker
                     position={{ lat: place.latitude, lng: place.longitude }}
@@ -156,10 +287,10 @@ export default function SearchPage() {
 
                   {openPlaceId === place.externalId && (
                     <CustomOverlayMap position={{ lat: place.latitude, lng: place.longitude }} yAnchor={1.35}>
-                      <div className="bg-white rounded-[28px] shadow-2xl border border-gray-100 p-5 min-w-[240px] relative animate-in zoom-in duration-200">
+                      <div className="bg-white rounded-[28px] shadow-2xl border border-gray-100 p-5 min-w-[240px] relative">
                         <button
                           onClick={() => { setOpenPlaceId(null); setSelectedPlaceId(null); }}
-                          className="absolute right-4 top-4 p-1 text-gray-300 hover:text-gray-900 transition-colors"
+                          className="absolute right-4 top-4 p-1 text-gray-300 hover:text-gray-900"
                         >
                           <X className="h-4 w-4" />
                         </button>

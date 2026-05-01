@@ -123,7 +123,7 @@ export default function MyPage() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/profile/edit")} 
+              onClick={() => navigate("/profile/edit")}
               className="flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-500 transition-colors hover:bg-gray-100 border border-gray-100"
             >
               <Edit3 className="h-3.5 w-3.5" />
