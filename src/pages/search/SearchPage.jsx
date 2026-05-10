@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Star, Search, MapPin, X, User, ArrowDownWideNarrow, Moon, Sun, Filter, Wifi, Plug, VolumeX, Clock } from "lucide-react"
+import { Star, Search, MapPin, X, User, Moon, Sun, Filter, Wifi, Plug, VolumeX, Clock } from "lucide-react"
 import { Map, MapMarker, CustomOverlayMap, useKakaoLoader } from "react-kakao-maps-sdk"
 
 export default function SearchPage() {
@@ -20,8 +20,8 @@ export default function SearchPage() {
     minRating: 0,
     sortBy: "default",
   });
-  
-  // --- 다크 모드 및 상세 필터 상태 (추가) ---
+
+  // --- 다크 모드 및 상세 필터 상태 ---
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem("darkMode") === "true";
   });
@@ -77,7 +77,7 @@ export default function SearchPage() {
 
       results.forEach(result => {
         if (result.data) {
-          result.data.forEach(place => {
+          result.data.forEach((place) => {
             if (!seenIds.has(place.externalId)) {
               seenIds.add(place.externalId);
               mergedPlaces.push(place);
@@ -136,23 +136,21 @@ export default function SearchPage() {
       fetchFilteredPlaces();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.category, filters.minRating, fetchFilteredPlaces]); // sortBy는 API 호출과 무관하므로 의존성에서 제외
+  }, [filters.category, filters.minRating, fetchFilteredPlaces]);
 
   // --- 프론트엔드 정렬 및 필터 로직 ---
   const getSortedPlaces = () => {
     let sorted = [...places];
 
-    // 가상의 상세 필터 적용 (학생용 심플 버전: externalId 길이나 숫자를 이용해 임의로 필터링되는 척 보여주기)
+    // 가상의 상세 필터 적용 (학생용 심플 버전)
     if (advancedFilters.wifi) sorted = sorted.filter(p => (p.name.length + (p.externalId ? p.externalId.length : 0)) % 2 !== 0);
     if (advancedFilters.outlets) sorted = sorted.filter(p => (p.reviewCount || 0) % 2 === 0);
     if (advancedFilters.quiet) sorted = sorted.filter(p => (p.averageRating || 0) > 3.5);
     if (advancedFilters.open24) sorted = sorted.filter(p => (p.name.length % 3 !== 0));
 
     if (filters.sortBy === "reviewCount") {
-      // 리뷰 많은 순 내림차순
       return sorted.sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0));
     } else if (filters.sortBy === "rating") {
-      // 평점 높은 순 내림차순
       return sorted.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
     }
     return sorted;
@@ -185,8 +183,8 @@ export default function SearchPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsDarkMode(!isDarkMode)} 
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
             className="p-2 rounded-full bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
           >
             {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -221,7 +219,7 @@ export default function SearchPage() {
                   </button>
                 ))}
               </div>
-              <button 
+              <button
                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                 className={`p-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 transition-colors ${showAdvancedFilters ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-gray-400'}`}
               >
@@ -281,8 +279,8 @@ export default function SearchPage() {
                       key={place.externalId}
                       onClick={() => goToDetail(place)}
                       className={`p-5 rounded-[28px] border cursor-pointer transition-all hover:shadow-xl dark:hover:shadow-indigo-900/20 ${
-                        selectedPlaceId === place.externalId 
-                          ? "border-indigo-600 ring-4 ring-indigo-50 dark:ring-indigo-900/30 bg-white dark:bg-slate-800" 
+                        selectedPlaceId === place.externalId
+                          ? "border-indigo-600 ring-4 ring-indigo-50 dark:ring-indigo-900/30 bg-white dark:bg-slate-800"
                           : "border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800"
                       }`}
                     >

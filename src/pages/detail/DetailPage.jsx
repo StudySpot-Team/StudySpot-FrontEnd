@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, Star, MapPin, Phone, ExternalLink,
-  Navigation, Zap, VolumeX, MousePointer,
-  MessageSquarePlus, Heart, ChevronRight
+  Navigation, MessageSquarePlus, Heart, ChevronRight, Flame
 } from "lucide-react";
 import { Map, MapMarker, useKakaoLoader } from "react-kakao-maps-sdk";
 
@@ -16,13 +15,15 @@ export default function DetailPage() {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  // 로그인 기능 구현 전까지 임시 userId 사용
+  const [viewerCount, setViewerCount] = useState(1);
+
   const userId = 1;
 
   const [mapLoading] = useKakaoLoader({
     appkey: import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY,
   });
 
+  // --- 1. 장소 기본 정보 로드 ---
   useEffect(() => {
     const name = searchParams.get("name");
     const lat = searchParams.get("lat");
@@ -32,13 +33,13 @@ export default function DetailPage() {
     const safeLat = (!lat || lat === "null" || lat === "undefined") ? "0.0" : lat;
     const safeLng = (!lng || lng === "null" || lng === "undefined") ? "0.0" : lng;
 
-    // 장소 상세 조회 API 호출
     const fetchPlaceDetail = async () => {
       try {
         const url = `http://localhost:8080/api/places/${externalId}?name=${encodeURIComponent(safeName)}&lat=${safeLat}&lng=${safeLng}`;
         const response = await fetch(url);
         const res = await response.json();
 
+        // 백엔드에서 ApiResponse로 감싸서 오므로 res.data 사용
         if (res.data) {
           setPlace(res.data);
           await fetchFavoriteStatus();
@@ -53,7 +54,48 @@ export default function DetailPage() {
     fetchPlaceDetail();
   }, [externalId, searchParams]);
 
-  // 찜 상태 확인 API
+  // --- 2. 실시간 현재 보고 있는 사람 수 추적 로직 ---
+  useEffect(() => {
+    if (!externalId) return;
+
+    const sessionId = sessionStorage.getItem("viewSessionId") || crypto.randomUUID();
+    sessionStorage.setItem("viewSessionId", sessionId);
+
+    const joinUrl = `http://localhost:8080/api/places/${externalId}/viewing?sessionId=${sessionId}`;
+    const leaveUrl = `http://localhost:8080/api/places/${externalId}/viewing/leave?sessionId=${sessionId}`;
+
+    const sendHeartbeat = async () => {
+      try {
+        const response = await fetch(joinUrl, { method: 'POST' });
+        if (response.ok) {
+          const result = await response.json();
+          setViewerCount(result.data || 1);
+        }
+      } catch (err) {
+        console.error("하트비트 전송 실패", err);
+      }
+    };
+
+    sendHeartbeat();
+
+    // 3초마다 갱신
+    const intervalId = setInterval(sendHeartbeat, 3000);
+
+    // 브라우저 창 닫기/새로고침 시에만 즉시 이탈 처리
+    const handleBeforeUnload = () => {
+      navigator.sendBeacon(leaveUrl);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      navigator.sendBeacon(leaveUrl);
+    };
+  }, [externalId]);
+
+  // --- 3. 부가 기능 (찜, 외부 링크, 리뷰 이동) ---
   const fetchFavoriteStatus = async () => {
     try {
       const res = await fetch(`http://localhost:8080/api/favorites/check?userId=${userId}&placeId=${externalId}`);
@@ -65,7 +107,6 @@ export default function DetailPage() {
     }
   };
 
-  // 찜하기 토글
   const handleToggleFavorite = async (e) => {
     if (e) e.stopPropagation();
     const previousState = isFavorite;
@@ -90,9 +131,8 @@ export default function DetailPage() {
     }
   };
 
-  // 1. 리뷰 작성 페이지 이동
   const handleWriteReview = (e) => {
-    if (e) e.stopPropagation(); // 부모 div의 클릭 이벤트 전파 방지
+    if (e) e.stopPropagation();
     const query = new URLSearchParams({
       name: place.name,
       address: place.roadAddress || place.address
@@ -100,7 +140,6 @@ export default function DetailPage() {
     navigate(`/reviews/write/${externalId}?${query}`);
   };
 
-  // 2. 전체 리뷰 목록 페이지 이동 (새로 만든 기능)
   const handleViewAllReviews = () => {
     navigate(`/reviews/place/${externalId}?name=${encodeURIComponent(place.name)}`);
   };
@@ -141,6 +180,16 @@ export default function DetailPage() {
 
       <div className="max-w-xl mx-auto px-4 -mt-12 relative z-10">
         <div className="rounded-[32px] bg-white p-8 shadow-2xl border border-gray-100">
+
+          {viewerCount > 0 && (
+            <div className="flex items-center gap-1.5 inline-flex bg-red-50 px-3 py-1.5 rounded-full border border-red-100 animate-pulse mb-4">
+              <Flame className="w-4 h-4 text-red-500" />
+              <span className="text-xs font-black text-red-600 tracking-tight">
+                현재 {viewerCount}명이 이 장소를 보고 있어요!
+              </span>
+            </div>
+          )}
+
           {/* 장소 기본 정보 */}
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -173,7 +222,7 @@ export default function DetailPage() {
             </div>
           </div>
 
-          {/* --- 방문자 리뷰 섹션 --- */}
+          {/* 방문자 리뷰 섹션 */}
           <div className="mt-12 pb-4">
             <div className="flex justify-between items-center mb-5">
               <div
